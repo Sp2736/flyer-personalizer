@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle, LogOut } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface Template {
@@ -31,15 +31,31 @@ export default function Home() {
 
   // Submission Form State
   const [fullName, setFullName] = useState('');
+  const [collegeName, setCollegeName] = useState('');
   const [studentId, setStudentId] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(TEMPLATES[0]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [submissionErrors, setSubmissionErrors] = useState<{ fullName?: string; photo?: string }>({});
+  const [submissionErrors, setSubmissionErrors] = useState<{ fullName?: string; collegeName?: string; phoneNumber?: string; photo?: string }>({});
 
   // Handlers
+  const handleSignOut = () => {
+    setCollegeId('');
+    setPassword('');
+    setFullName('');
+    setCollegeName('');
+    setStudentId('');
+    setPhoneNumber('');
+    setPhotoPreview(null);
+    setPhotoError(null);
+    setLoginErrors({});
+    setSubmissionErrors({});
+    setCurrentScreen('login');
+  };
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const errors: { collegeId?: string; password?: string } = {};
@@ -111,10 +127,16 @@ export default function Home() {
 
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
-    const errors: { fullName?: string; photo?: string } = {};
+    const errors: { fullName?: string; collegeName?: string; phoneNumber?: string; photo?: string } = {};
 
     if (!fullName.trim() || fullName.trim().length < 2) {
       errors.fullName = 'Full Name must be at least 2 characters';
+    }
+    if (!collegeName.trim()) {
+      errors.collegeName = 'College Name is required';
+    }
+    if (!phoneNumber.trim() || phoneNumber.trim().length < 10) {
+      errors.phoneNumber = 'Enter a valid phone number';
     }
     if (!photoPreview) {
       errors.photo = 'Please upload a photo';
@@ -136,6 +158,27 @@ export default function Home() {
     <main className="min-h-screen relative flex flex-col items-center justify-center p-4 md:p-8">
       <AnimatedBackground />
 
+      {/* Top Header Navigation for Authenticated/Active Session */}
+      {currentScreen !== 'login' && (
+        <div className="z-20 w-full max-w-6xl mx-auto flex items-center justify-between py-4 px-2 mb-6">
+          <div className="flex items-center gap-3">
+            <img src="/logo.jpg" alt="Logo" className="w-9 h-9 rounded-md object-cover border border-white/20 shadow-md" />
+            <span className="font-heading font-bold text-lg text-white tracking-tight">
+              Poster Generator
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 shadow-md"
+          >
+            <LogOut className="w-4 h-4 text-pink-400" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      )}
+
       <div className="z-10 w-full max-w-6xl mx-auto">
         <AnimatePresence mode="wait">
           {/* SCREEN 1: LOGIN */}
@@ -143,16 +186,14 @@ export default function Home() {
             <motion.div
               key="login"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
               className="max-w-md mx-auto w-full"
             >
-              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-8 shadow-[0_8px_40px_rgba(124,58,237,0.2)]">
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-8 shadow-[0_8px_40px_rgba(124,58,237,0.2)]">
                 <div className="text-center mb-8">
-                  <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white mb-4 shadow-lg">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
+                  <img src="/logo.jpg" alt="Logo" className="w-16 h-16 rounded-md object-cover border border-white/20 shadow-xl mx-auto mb-4" />
                   <h1 className="text-2xl font-bold font-heading bg-gradient-to-r from-white via-slate-200 to-purple-200 bg-clip-text text-transparent">
                     Poster Generator
                   </h1>
@@ -171,10 +212,10 @@ export default function Home() {
                         type="text"
                         value={collegeId}
                         onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
-                        placeholder="e.g. 24DCS088"
+                        suppressHydrationWarning
                         className={`w-full bg-white/5 border ${
                           loginErrors.collegeId ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
-                        } rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        } rounded-md pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                     </div>
                     {loginErrors.collegeId && (
@@ -194,14 +235,15 @@ export default function Home() {
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
+                        suppressHydrationWarning
                         className={`w-full bg-white/5 border ${
                           loginErrors.password ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
-                        } rounded-xl pl-4 pr-11 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        } rounded-md pl-4 pr-11 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        suppressHydrationWarning
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -219,7 +261,8 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={isVerifying}
-                      className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                      suppressHydrationWarning
+                      className="flex-1 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3 rounded-md shadow-lg transition-all flex items-center justify-center gap-2"
                     >
                       {isVerifying ? (
                         <>
@@ -234,7 +277,8 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleBypass}
-                      className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 border-dashed rounded-xl text-slate-400 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98]"
+                      suppressHydrationWarning
+                      className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 border-dashed rounded-md text-slate-400 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98]"
                     >
                       DEV BYPASS
                     </button>
@@ -255,19 +299,19 @@ export default function Home() {
               className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
             >
               {/* Left Column: Form Card */}
-              <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 shadow-[0_8px_40px_rgba(124,58,237,0.15)]">
+              <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 md:p-8 shadow-[0_8px_40px_rgba(124,58,237,0.15)]">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-bold font-heading text-white">Create Your Poster</h2>
                     <p className="text-xs text-slate-400">Fill in your details and choose a studio template</p>
                   </div>
-                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
                     Step 1 of 2
                   </span>
                 </div>
 
                 <form onSubmit={handleGenerate} className="space-y-6">
-                  {/* Name & ID Inputs */}
+                  {/* Inputs Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
@@ -277,13 +321,29 @@ export default function Home() {
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="e.g. Swayam Patel"
                         className={`w-full bg-white/5 border ${
                           submissionErrors.fullName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                        } rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                       {submissionErrors.fullName && (
                         <p className="text-xs text-red-400 mt-1">{submissionErrors.fullName}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
+                        College Name <span className="text-pink-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={collegeName}
+                        onChange={(e) => setCollegeName(e.target.value)}
+                        className={`w-full bg-white/5 border ${
+                          submissionErrors.collegeName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                        } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                      />
+                      {submissionErrors.collegeName && (
+                        <p className="text-xs text-red-400 mt-1">{submissionErrors.collegeName}</p>
                       )}
                     </div>
 
@@ -295,9 +355,25 @@ export default function Home() {
                         type="text"
                         value={studentId}
                         onChange={(e) => setStudentId(e.target.value)}
-                        placeholder="e.g. 24DCS088"
-                        className="w-full bg-white/5 border border-white/10 focus:border-purple-500 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
+                        className="w-full bg-white/5 border border-white/10 focus:border-purple-500 rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
+                        Phone Number <span className="text-pink-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className={`w-full bg-white/5 border ${
+                          submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                        } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                      />
+                      {submissionErrors.phoneNumber && (
+                        <p className="text-xs text-red-400 mt-1">{submissionErrors.phoneNumber}</p>
+                      )}
                     </div>
                   </div>
 
@@ -319,7 +395,7 @@ export default function Home() {
                           handlePhotoFile(e.dataTransfer.files[0]);
                         }
                       }}
-                      className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                      className={`relative border-2 border-dashed rounded-md p-6 text-center transition-all ${
                         isDragging
                           ? 'border-pink-500 bg-pink-500/10 scale-[1.01]'
                           : photoPreview
@@ -379,7 +455,7 @@ export default function Home() {
                           key={tmpl.id}
                           type="button"
                           onClick={() => setSelectedTemplate(tmpl)}
-                          className={`relative rounded-xl overflow-hidden border text-left transition-all ${
+                          className={`relative rounded-md overflow-hidden border text-left transition-all ${
                             selectedTemplate?.id === tmpl.id
                               ? 'border-purple-500 ring-2 ring-purple-500/50 scale-[1.02]'
                               : 'border-white/10 hover:border-white/30 opacity-70 hover:opacity-100'
@@ -404,7 +480,7 @@ export default function Home() {
                   <button
                     type="submit"
                     disabled={isGenerating}
-                    className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mt-4"
+                    className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 mt-4"
                   >
                     {isGenerating ? (
                       <>
@@ -420,11 +496,11 @@ export default function Home() {
               </div>
 
               {/* Right Column: Live Preview Card */}
-              <div className="lg:col-span-5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 shadow-[0_8px_40px_rgba(124,58,237,0.15)] flex flex-col items-center">
+              <div className="lg:col-span-5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 shadow-[0_8px_40px_rgba(124,58,237,0.15)] flex flex-col items-center">
                 <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 self-start">
                   Live Preview Hint
                 </h3>
-                <div className="relative w-full aspect-[3/4] max-w-sm rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-slate-900 flex items-center justify-center">
+                <div className="relative w-full aspect-[3/4] max-w-sm rounded-md overflow-hidden border border-white/15 shadow-2xl bg-slate-900 flex items-center justify-center">
                   {selectedTemplate && (
                     <img
                       src={selectedTemplate.thumbnailUrl}
@@ -445,7 +521,9 @@ export default function Home() {
                     <h4 className="font-heading font-bold text-lg text-white">
                       {fullName || 'Your Name Here'}
                     </h4>
+                    {collegeName && <p className="text-xs text-slate-300 font-medium mt-0.5">{collegeName}</p>}
                     {studentId && <p className="text-xs text-purple-300 font-mono mt-0.5">{studentId}</p>}
+                    {phoneNumber && <p className="text-xs text-slate-400 font-mono mt-0.5">{phoneNumber}</p>}
                     <span className="mt-4 text-[10px] text-slate-400 bg-black/60 px-3 py-1 rounded-full border border-white/10">
                       {selectedTemplate?.name || 'Template Preview'}
                     </span>
@@ -465,7 +543,7 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
               className="max-w-md mx-auto text-center"
             >
-              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-8 shadow-[0_8px_40px_rgba(124,58,237,0.3)]">
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-8 shadow-[0_8px_40px_rgba(124,58,237,0.3)]">
                 <div className="inline-flex items-center justify-center p-3 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 mb-4">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
@@ -473,7 +551,7 @@ export default function Home() {
                 <p className="text-xs text-slate-400 mt-1 mb-6">Your custom event poster is ready to download</p>
 
                 {/* Final Poster Card */}
-                <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border-2 border-purple-500/50 shadow-2xl mb-6 bg-slate-900 flex flex-col items-center justify-center p-6">
+                <div className="relative aspect-[3/4] rounded-md overflow-hidden border-2 border-purple-500/50 shadow-2xl mb-6 bg-slate-900 flex flex-col items-center justify-center p-6">
                   {selectedTemplate && (
                     <img
                       src={selectedTemplate.thumbnailUrl}
@@ -490,7 +568,9 @@ export default function Home() {
                       />
                     )}
                     <h3 className="text-xl font-bold text-white font-heading">{fullName}</h3>
+                    {collegeName && <p className="text-xs text-slate-200 font-medium">{collegeName}</p>}
                     {studentId && <p className="text-xs text-purple-300 font-mono">{studentId}</p>}
+                    {phoneNumber && <p className="text-xs text-slate-400 font-mono">{phoneNumber}</p>}
                     <p className="text-[10px] text-amber-400 font-medium uppercase tracking-widest mt-2">
                       Official Attendee
                     </p>
@@ -500,13 +580,13 @@ export default function Home() {
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={() => alert('Downloading poster...')}
-                    className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                    className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2"
                   >
                     <Download className="w-5 h-5" /> Download Poster
                   </button>
                   <button
                     onClick={() => setCurrentScreen('submission')}
-                    className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-300 text-sm font-medium transition-all"
+                    className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-slate-300 text-sm font-medium transition-all"
                   >
                     Generate Another
                   </button>
