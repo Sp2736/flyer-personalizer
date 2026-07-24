@@ -160,10 +160,10 @@ export default function Home() {
 
       {/* Top Header Navigation for Authenticated/Active Session */}
       {currentScreen !== 'login' && (
-        <div className="z-20 w-full max-w-6xl mx-auto flex items-center justify-between py-4 px-2 mb-6">
-          <div className="flex items-center gap-3">
-            <img src="/logo.jpg" alt="Logo" className="w-9 h-9 rounded-md object-cover border border-white/20 shadow-md" />
-            <span className="font-heading font-bold text-lg text-white tracking-tight">
+        <header className="sticky top-2 sm:top-4 z-50 w-full max-w-6xl mx-auto mb-6 px-4 sm:px-6 py-3 bg-slate-950/90 backdrop-blur-md border border-white/10 rounded-md sm:rounded-lg shadow-xl flex items-center justify-between transition-all">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <img src="/logo.jpg" alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 rounded-md object-cover border border-white/20 shadow-md" />
+            <span className="font-heading font-bold text-base sm:text-lg text-white tracking-tight">
               Poster Generator
             </span>
           </div>
@@ -171,12 +171,12 @@ export default function Home() {
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 shadow-md"
+            className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 shadow-md"
           >
             <LogOut className="w-4 h-4 text-pink-400" />
             <span>Sign Out</span>
           </button>
-        </div>
+        </header>
       )}
 
       <div className="z-10 w-full max-w-6xl mx-auto">
