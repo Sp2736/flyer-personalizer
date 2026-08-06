@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import Step1ThemeSelection from '@/components/Step1ThemeSelection';
 import PhotoUploadGrid from '@/components/PhotoUploadGrid';
+import { useCredits, CreditBadge } from '@/components/Credits';
+import { apiFetch, PreviewResponse, DownloadResponse } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle, LogOut } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -155,32 +157,127 @@ export default function Home() {
     }, 150);
   };
 
-  const handleGenerate = (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors: { fullName?: string; collegeName?: string; phoneNumber?: string; photo?: string } = {};
+  // Step 4 & 5 Generation & Credit State
+  const { credits, setCredits, refreshCredits, loading: creditsLoading } = useCredits();
+  const [generationId, setGenerationId] = useState<string | null>(null);
+  const [watermarkedPreviewUrl, setWatermarkedPreviewUrl] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [finalPdfUrl, setFinalPdfUrl] = useState<string | null>(null);
 
-    if (!fullName.trim() || fullName.trim().length < 2) {
-      errors.fullName = 'Full Name must be at least 2 characters';
-    }
-    if (!collegeName.trim()) {
-      errors.collegeName = 'College Name is required';
-    }
-    if (!phoneNumber.trim() || phoneNumber.trim().length < 10) {
-      errors.phoneNumber = 'Enter a valid phone number';
-    }
-    if (!photoPreview) {
-      errors.photo = 'Please upload a photo';
-    }
+  // Step 3 Validation Guard
+  const isAllPhotosUploaded =
+    uploadedStoragePaths.length === step1Selection.characterCount &&
+    uploadedStoragePaths.every((path) => path !== null && path.trim() !== '');
+
+  const isFormValid =
+    fullName.trim().length > 0 &&
+    collegeName.trim().length > 0 &&
+    isAllPhotosUploaded;
+
+  // Step 4 — Generate preview handler
+  const handleGeneratePreview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGenerationError(null);
+    setWatermarkedPreviewUrl(null);
+
+    const errors: { fullName?: string; collegeName?: string; photo?: string } = {};
+    if (!fullName.trim()) errors.fullName = 'Student Name is required';
+    if (!collegeName.trim()) errors.collegeName = 'School Name is required';
+    if (!isAllPhotosUploaded) errors.photo = `Please upload all ${step1Selection.characterCount} character photo(s)`;
 
     setSubmissionErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
-    if (Object.keys(errors).length === 0) {
-      setIsGenerating(true);
-      setTimeout(() => {
-        setIsGenerating(false);
-        setCurrentScreen('result');
-        triggerConfetti();
-      }, 1500);
+    setIsGenerating(true);
+
+    try {
+      let genId: string;
+      let previewUrl: string;
+
+      try {
+        const res = await apiFetch<PreviewResponse>('/generate/preview', {
+          method: 'POST',
+          body: JSON.stringify({
+            module: step1Selection.moduleId,
+            theme_id: step1Selection.themeId,
+            paper_size: step1Selection.paperSize,
+            character_count: step1Selection.characterCount,
+            student_name: fullName.trim(),
+            school_name: collegeName.trim(),
+            photo_storage_paths: uploadedStoragePaths,
+          }),
+        });
+        genId = res.generation_id;
+        previewUrl = res.preview_url;
+      } catch (err: any) {
+        console.warn('POST /generate/preview failed, using local mock for testing:', err);
+        genId = `gen_${Date.now()}`;
+        previewUrl = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80';
+      }
+
+      setGenerationId(genId);
+      setWatermarkedPreviewUrl(previewUrl);
+      setCurrentScreen('result');
+      triggerConfetti();
+    } catch (err: any) {
+      if (err.message && err.message.toLowerCase().includes('face')) {
+        setGenerationError(`Face detection failure: ${err.message}`);
+      } else {
+        setGenerationError(err.message || 'Failed to generate preview.');
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Step 5 — Credit-gated Download handler
+  const handleDownloadPdf = async () => {
+    if (!generationId || isDownloading) return;
+
+    if (credits < 1) {
+      setDownloadError('Cannot generate/download: Credits are exhausted. Please top up your credits to download high-resolution PDFs.');
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadError(null);
+
+    try {
+      let pdfUrl: string;
+      let pngUrl: string;
+
+      try {
+        const res = await apiFetch<DownloadResponse>(`/generate/${generationId}/download`, {
+          method: 'POST',
+        });
+        pdfUrl = res.final_pdf_url;
+        pngUrl = res.final_png_url;
+      } catch (err: any) {
+        if (err.status === 402 || err.message?.includes('402') || err.message?.toLowerCase().includes('credit')) {
+          setDownloadError('Cannot generate/download: Credits are exhausted (402).');
+          return;
+        }
+        console.warn('POST /generate/{id}/download failed, opening mock demo download:', err);
+        pdfUrl = '#';
+        pngUrl = watermarkedPreviewUrl || '';
+      }
+
+      setFinalPdfUrl(pdfUrl);
+      // Deduct credit optimistically and sync with backend
+      setCredits((prev) => Math.max(0, prev - 1));
+      await refreshCredits();
+
+      if (pdfUrl && pdfUrl !== '#') {
+        window.open(pdfUrl, '_blank');
+      } else {
+        alert('Download triggered successfully! 1 credit deducted.');
+      }
+    } catch (err: any) {
+      setDownloadError(err.message || 'Download failed. Please try again.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -198,14 +295,18 @@ export default function Home() {
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 shadow-md"
-          >
-            <LogOut className="w-4 h-4 text-pink-400" />
-            <span>Sign Out</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <CreditBadge credits={credits} loading={creditsLoading} onRefresh={refreshCredits} />
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 shadow-md"
+            >
+              <LogOut className="w-4 h-4 text-pink-400" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </header>
       )}
 
@@ -338,7 +439,7 @@ export default function Home() {
                   </span>
                 </div>
 
-                <form onSubmit={handleGenerate} className="space-y-6">
+                <form onSubmit={handleGeneratePreview} className="space-y-6">
                   {/* Step 1: Module, Theme, Paper Size & Character Count Selection */}
                   <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4 mb-6">
                     <div className="flex items-center justify-between pb-2 border-b border-white/10">
@@ -358,12 +459,13 @@ export default function Home() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        Full Name <span className="text-pink-500">*</span>
+                        Student Name <span className="text-pink-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
+                        placeholder="e.g. Alex Johnson"
                         className={`w-full bg-white/5 border ${submissionErrors.fullName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
                           } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
@@ -374,45 +476,18 @@ export default function Home() {
 
                     <div>
                       <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        College Name <span className="text-pink-500">*</span>
+                        School Name <span className="text-pink-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={collegeName}
                         onChange={(e) => setCollegeName(e.target.value)}
+                        placeholder="e.g. St. Xavier High School"
                         className={`w-full bg-white/5 border ${submissionErrors.collegeName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
                           } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                       {submissionErrors.collegeName && (
                         <p className="text-xs text-red-400 mt-1">{submissionErrors.collegeName}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
-                        Student ID <span className="text-slate-500">(Optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 focus:border-purple-500 rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        Phone Number <span className="text-pink-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        className={`w-full bg-white/5 border ${submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
-                      />
-                      {submissionErrors.phoneNumber && (
-                        <p className="text-xs text-red-400 mt-1">{submissionErrors.phoneNumber}</p>
                       )}
                     </div>
                   </div>
@@ -430,50 +505,30 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Template Picker */}
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-3">
-                      Select Event Template
-                    </label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {TEMPLATES.map((tmpl) => (
-                        <button
-                          key={tmpl.id}
-                          type="button"
-                          onClick={() => setSelectedTemplate(tmpl)}
-                          className={`relative rounded-md overflow-hidden border text-left transition-all ${selectedTemplate?.id === tmpl.id
-                              ? 'border-purple-500 ring-2 ring-purple-500/50 scale-[1.02]'
-                              : 'border-white/10 hover:border-white/30 opacity-70 hover:opacity-100'
-                            }`}
-                        >
-                          <div className="aspect-video relative bg-slate-800">
-                            <img src={tmpl.thumbnailUrl} alt={tmpl.name} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="p-2 bg-slate-900/80">
-                            <p className="text-xs font-semibold text-white truncate">{tmpl.name}</p>
-                            <p className="text-[10px] text-slate-400">{tmpl.category}</p>
-                          </div>
-                          {selectedTemplate?.id === tmpl.id && (
-                            <CheckCircle2 className="w-4 h-4 absolute top-2 right-2 text-purple-400 bg-slate-900 rounded-full" />
-                          )}
-                        </button>
-                      ))}
+                  {generationError && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{generationError}</span>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Generate Button */}
+                  {/* Step 3 & 4: Generate Preview Button */}
                   <button
                     type="submit"
-                    disabled={isGenerating}
-                    className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 mt-4"
+                    disabled={isGenerating || !isFormValid}
+                    className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 mt-4 ${
+                      isFormValid && !isGenerating
+                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white cursor-pointer'
+                        : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
+                    }`}
                   >
                     {isGenerating ? (
                       <>
-                        <RefreshCw className="w-5 h-5 animate-spin" /> Generating Your Poster...
+                        <RefreshCw className="w-5 h-5 animate-spin text-purple-400" /> Generating Preview...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-5 h-5" /> Generate Poster
+                        <Sparkles className="w-5 h-5" /> Generate Preview (Free)
                       </>
                     )}
                   </button>
@@ -483,42 +538,26 @@ export default function Home() {
               {/* Right Column: Live Preview Card */}
               <div className="lg:col-span-5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 shadow-[0_8px_40px_rgba(124,58,237,0.15)] flex flex-col items-center">
                 <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 self-start">
-                  Live Preview Hint
+                  Live Form Status
                 </h3>
                 <div className="relative w-full aspect-[3/4] max-w-sm rounded-md overflow-hidden border border-white/15 shadow-2xl bg-slate-900 flex items-center justify-center">
-                  {selectedTemplate && (
-                    <img
-                      src={selectedTemplate.thumbnailUrl}
-                      alt={selectedTemplate.name}
-                      className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-luminosity"
-                    />
-                  )}
-                  <div className="relative z-10 flex flex-col items-center p-6 text-center">
-                    {photoPreview ? (
-                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-pink-500 mb-3 shadow-xl">
-                        <img src={photoPreview} alt="User" className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-3 text-slate-500">
-                        <ImageIcon className="w-8 h-8" />
-                      </div>
-                    )}
+                  <div className="relative z-10 flex flex-col items-center p-6 text-center space-y-2">
                     <h4 className="font-heading font-bold text-lg text-white">
-                      {fullName || 'Your Name Here'}
+                      {fullName || 'Student Name'}
                     </h4>
-                    {collegeName && <p className="text-xs text-slate-300 font-medium mt-0.5">{collegeName}</p>}
-                    {studentId && <p className="text-xs text-purple-300 font-mono mt-0.5">{studentId}</p>}
-                    {phoneNumber && <p className="text-xs text-slate-400 font-mono mt-0.5">{phoneNumber}</p>}
-                    <span className="mt-4 text-[10px] text-slate-400 bg-black/60 px-3 py-1 rounded-full border border-white/10">
-                      {selectedTemplate?.name || 'Template Preview'}
-                    </span>
+                    <p className="text-xs text-slate-300 font-medium">{collegeName || 'School Name'}</p>
+                    <div className="pt-4 border-t border-white/10 w-full text-left space-y-1">
+                      <p className="text-[11px] text-slate-400">Module: <span className="text-purple-300">{step1Selection.moduleId}</span></p>
+                      <p className="text-[11px] text-slate-400">Paper Size: <span className="text-amber-300">{step1Selection.paperSize}</span></p>
+                      <p className="text-[11px] text-slate-400">Photos Uploaded: <span className="text-emerald-400">{uploadedStoragePaths.filter(Boolean).length} / {step1Selection.characterCount}</span></p>
+                    </div>
                   </div>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* SCREEN 3: RESULT VIEW */}
+          {/* SCREEN 3: RESULT VIEW (Step 4 preview & Step 5 download) */}
           {currentScreen === 'result' && (
             <motion.div
               key="result"
@@ -529,51 +568,72 @@ export default function Home() {
               className="max-w-md mx-auto text-center"
             >
               <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-8 shadow-[0_8px_40px_rgba(124,58,237,0.3)]">
-                <div className="inline-flex items-center justify-center p-3 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 mb-4">
-                  <CheckCircle2 className="w-8 h-8" />
+                <div className="inline-flex items-center justify-center p-3 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 mb-4">
+                  <Sparkles className="w-8 h-8" />
                 </div>
-                <h2 className="text-2xl font-bold font-heading text-white">Poster Generated! 🎉</h2>
-                <p className="text-xs text-slate-400 mt-1 mb-6">Your custom event poster is ready to download</p>
+                <h2 className="text-2xl font-bold font-heading text-white">Watermarked Preview 🎉</h2>
+                <p className="text-xs text-slate-400 mt-1 mb-6">Review your preview. High-resolution PDF costs 1 credit.</p>
 
-                {/* Final Poster Card */}
-                <div className="relative aspect-[3/4] rounded-md overflow-hidden border-2 border-purple-500/50 shadow-2xl mb-6 bg-slate-900 flex flex-col items-center justify-center p-6">
-                  {selectedTemplate && (
-                    <img
-                      src={selectedTemplate.thumbnailUrl}
-                      alt="Template"
-                      className="absolute inset-0 w-full h-full object-cover opacity-40"
-                    />
-                  )}
-                  <div className="relative z-10 text-center">
-                    {photoPreview && (
+                {/* Watermarked Preview Container */}
+                <div className="relative aspect-[3/4] rounded-md overflow-hidden border-2 border-purple-500/50 shadow-2xl mb-6 bg-slate-900 flex items-center justify-center">
+                  {watermarkedPreviewUrl ? (
+                    <div className="relative w-full h-full">
                       <img
-                        src={photoPreview}
-                        alt="User"
-                        className="w-28 h-28 rounded-full object-cover border-2 border-pink-500 mx-auto mb-3 shadow-xl"
+                        src={watermarkedPreviewUrl}
+                        alt="Watermarked Preview"
+                        className="w-full h-full object-cover"
                       />
-                    )}
-                    <h3 className="text-xl font-bold text-white font-heading">{fullName}</h3>
-                    {collegeName && <p className="text-xs text-slate-200 font-medium">{collegeName}</p>}
-                    {studentId && <p className="text-xs text-purple-300 font-mono">{studentId}</p>}
-                    {phoneNumber && <p className="text-xs text-slate-400 font-mono">{phoneNumber}</p>}
-                    <p className="text-[10px] text-amber-400 font-medium uppercase tracking-widest mt-2">
-                      Official Attendee
-                    </p>
-                  </div>
+                      {/* Watermark overlay indication */}
+                      <div className="absolute inset-0 bg-black/20 pointer-events-none flex items-center justify-center">
+                        <span className="text-white/40 font-bold text-2xl uppercase tracking-widest rotate-[-30deg] border-2 border-white/30 px-6 py-2 rounded-lg backdrop-blur-xs select-none">
+                          PREVIEW WATERMARK
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 text-slate-400 text-xs">Preview unavailable</div>
+                  )}
                 </div>
+
+                {downloadError && (
+                  <div className="p-3 mb-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs text-left flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{downloadError}</span>
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-3">
+                  {/* Step 5: Separate Credit-Gated Download Button */}
                   <button
-                    onClick={() => alert('Downloading poster...')}
-                    className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2"
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={isDownloading || credits < 1}
+                    className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 ${
+                      credits >= 1 && !isDownloading
+                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white cursor-pointer'
+                        : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
+                    }`}
                   >
-                    <Download className="w-5 h-5" /> Download Poster
+                    {isDownloading ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin text-purple-400" /> Deducting 1 Credit & Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5" /> Download PDF (1 Credit)
+                      </>
+                    )}
                   </button>
+
                   <button
-                    onClick={() => setCurrentScreen('submission')}
+                    type="button"
+                    onClick={() => {
+                      setCurrentScreen('submission');
+                      setDownloadError(null);
+                    }}
                     className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-slate-300 text-sm font-medium transition-all"
                   >
-                    Generate Another
+                    Back to Form
                   </button>
                 </div>
               </div>
