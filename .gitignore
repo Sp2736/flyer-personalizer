@@ -3,3 +3,4 @@ tasks/
 # Next.js build output
 .next
 out
+.env.local

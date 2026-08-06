@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import AnimatedBackground from '@/components/AnimatedBackground';
+import Step1ThemeSelection from '@/components/Step1ThemeSelection';
+import PhotoUploadGrid from '@/components/PhotoUploadGrid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle, LogOut } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -40,6 +42,34 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [submissionErrors, setSubmissionErrors] = useState<{ fullName?: string; collegeName?: string; phoneNumber?: string; photo?: string }>({});
+
+  const [step1Selection, setStep1Selection] = useState<{
+    moduleId: string;
+    themeId: string;
+    paperSize: 'A4' | '12x18';
+    characterCount: number;
+  }>({
+    moduleId: 'notebook_sticker',
+    themeId: 'theme_cyberpunk',
+    paperSize: 'A4',
+    characterCount: 1,
+  });
+
+  // Step 2 Upload Storage Paths (keyed by slot index)
+  const [uploadedStoragePaths, setUploadedStoragePaths] = useState<(string | null)[]>([null]);
+
+  const handleSlotsChanged = useCallback((paths: (string | null)[]) => {
+    setUploadedStoragePaths(paths);
+  }, []);
+
+  const handleStep1SelectionChange = useCallback((selection: {
+    moduleId: string;
+    themeId: string;
+    paperSize: 'A4' | '12x18';
+    characterCount: number;
+  }) => {
+    setStep1Selection(selection);
+  }, []);
 
   // Handlers
   const handleSignOut = () => {
@@ -213,9 +243,8 @@ export default function Home() {
                         value={collegeId}
                         onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
                         suppressHydrationWarning
-                        className={`w-full bg-white/5 border ${
-                          loginErrors.collegeId ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
-                        } rounded-md pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        className={`w-full bg-white/5 border ${loginErrors.collegeId ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
+                          } rounded-md pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                     </div>
                     {loginErrors.collegeId && (
@@ -236,9 +265,8 @@ export default function Home() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         suppressHydrationWarning
-                        className={`w-full bg-white/5 border ${
-                          loginErrors.password ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
-                        } rounded-md pl-4 pr-11 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        className={`w-full bg-white/5 border ${loginErrors.password ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
+                          } rounded-md pl-4 pr-11 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                       <button
                         type="button"
@@ -311,6 +339,21 @@ export default function Home() {
                 </div>
 
                 <form onSubmit={handleGenerate} className="space-y-6">
+                  {/* Step 1: Module, Theme, Paper Size & Character Count Selection */}
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4 mb-6">
+                    <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-purple-300">
+                        Step 1 Configuration
+                      </h3>
+                      <span className="text-[10px] bg-purple-500/20 text-purple-200 px-2 py-0.5 rounded border border-purple-500/30 font-mono">
+                        {step1Selection.paperSize} · {step1Selection.characterCount} {step1Selection.characterCount === 1 ? 'Slot' : 'Slots'}
+                      </span>
+                    </div>
+                    <Step1ThemeSelection
+                      onSelectionChange={handleStep1SelectionChange}
+                    />
+                  </div>
+
                   {/* Inputs Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -321,9 +364,8 @@ export default function Home() {
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className={`w-full bg-white/5 border ${
-                          submissionErrors.fullName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                        } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        className={`w-full bg-white/5 border ${submissionErrors.fullName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                       {submissionErrors.fullName && (
                         <p className="text-xs text-red-400 mt-1">{submissionErrors.fullName}</p>
@@ -338,9 +380,8 @@ export default function Home() {
                         type="text"
                         value={collegeName}
                         onChange={(e) => setCollegeName(e.target.value)}
-                        className={`w-full bg-white/5 border ${
-                          submissionErrors.collegeName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                        } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        className={`w-full bg-white/5 border ${submissionErrors.collegeName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                       {submissionErrors.collegeName && (
                         <p className="text-xs text-red-400 mt-1">{submissionErrors.collegeName}</p>
@@ -367,9 +408,8 @@ export default function Home() {
                         type="tel"
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
-                        className={`w-full bg-white/5 border ${
-                          submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                        } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        className={`w-full bg-white/5 border ${submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
                       />
                       {submissionErrors.phoneNumber && (
                         <p className="text-xs text-red-400 mt-1">{submissionErrors.phoneNumber}</p>
@@ -377,70 +417,16 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Photo Dropzone */}
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                      Upload Portrait Photo <span className="text-pink-500">*</span>
-                    </label>
-                    <div
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setIsDragging(true);
-                      }}
-                      onDragLeave={() => setIsDragging(false)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDragging(false);
-                        if (e.dataTransfer.files?.[0]) {
-                          handlePhotoFile(e.dataTransfer.files[0]);
-                        }
-                      }}
-                      className={`relative border-2 border-dashed rounded-md p-6 text-center transition-all ${
-                        isDragging
-                          ? 'border-pink-500 bg-pink-500/10 scale-[1.01]'
-                          : photoPreview
-                          ? 'border-purple-500/50 bg-purple-500/5'
-                          : 'border-white/15 bg-white/5 hover:border-purple-500/50'
-                      }`}
-                    >
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png"
-                        capture="environment"
-                        onChange={(e) => {
-                          if (e.target.files?.[0]) handlePhotoFile(e.target.files[0]);
-                        }}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-
-                      {photoPreview ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-purple-500 shadow-lg">
-                            <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                          </div>
-                          <label
-                            htmlFor="photo-upload"
-                            className="cursor-pointer text-xs text-purple-400 hover:text-purple-300 underline font-medium"
-                          >
-                            Change Photo
-                          </label>
-                        </div>
-                      ) : (
-                        <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                          <div className="p-3 rounded-full bg-white/5 text-purple-400">
-                            <Upload className="w-6 h-6" />
-                          </div>
-                          <p className="text-sm font-medium text-slate-200">
-                            Drag & drop your photo, or <span className="text-purple-400 underline">browse</span>
-                          </p>
-                          <p className="text-xs text-slate-500">JPEG or PNG · Max 10MB</p>
-                        </label>
-                      )}
-                    </div>
-                    {photoError && <p className="text-xs text-red-400 mt-1.5">{photoError}</p>}
-                    {submissionErrors.photo && !photoError && (
-                      <p className="text-xs text-red-400 mt-1.5">{submissionErrors.photo}</p>
+                  {/* Step 2: Photo Upload UI (N slots based on character_count) */}
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4">
+                    <PhotoUploadGrid
+                      characterCount={step1Selection.characterCount}
+                      onSlotsChanged={handleSlotsChanged}
+                    />
+                    {submissionErrors.photo && (
+                      <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> {submissionErrors.photo}
+                      </p>
                     )}
                   </div>
 
@@ -455,11 +441,10 @@ export default function Home() {
                           key={tmpl.id}
                           type="button"
                           onClick={() => setSelectedTemplate(tmpl)}
-                          className={`relative rounded-md overflow-hidden border text-left transition-all ${
-                            selectedTemplate?.id === tmpl.id
+                          className={`relative rounded-md overflow-hidden border text-left transition-all ${selectedTemplate?.id === tmpl.id
                               ? 'border-purple-500 ring-2 ring-purple-500/50 scale-[1.02]'
                               : 'border-white/10 hover:border-white/30 opacity-70 hover:opacity-100'
-                          }`}
+                            }`}
                         >
                           <div className="aspect-video relative bg-slate-800">
                             <img src={tmpl.thumbnailUrl} alt={tmpl.name} className="w-full h-full object-cover" />
