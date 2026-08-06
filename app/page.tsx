@@ -50,11 +50,15 @@ export default function Home() {
     themeId: string;
     paperSize: 'A4' | '12x18';
     characterCount: number;
+    thumbnailUrl: string;
+    themeName: string;
   }>({
     moduleId: 'notebook_sticker',
     themeId: 'theme_cyberpunk',
     paperSize: 'A4',
     characterCount: 1,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&auto=format&fit=crop&q=80',
+    themeName: 'Cyberpunk Neon',
   });
 
   // Step 2 Upload Storage Paths (keyed by slot index)
@@ -69,6 +73,8 @@ export default function Home() {
     themeId: string;
     paperSize: 'A4' | '12x18';
     characterCount: number;
+    thumbnailUrl: string;
+    themeName: string;
   }) => {
     setStep1Selection(selection);
   }, []);
@@ -174,6 +180,7 @@ export default function Home() {
   const isFormValid =
     fullName.trim().length > 0 &&
     collegeName.trim().length > 0 &&
+    phoneNumber.trim().length >= 10 &&
     isAllPhotosUploaded;
 
   // Step 4 — Generate preview handler
@@ -182,9 +189,10 @@ export default function Home() {
     setGenerationError(null);
     setWatermarkedPreviewUrl(null);
 
-    const errors: { fullName?: string; collegeName?: string; photo?: string } = {};
+    const errors: { fullName?: string; collegeName?: string; phoneNumber?: string; photo?: string } = {};
     if (!fullName.trim()) errors.fullName = 'Student Name is required';
     if (!collegeName.trim()) errors.collegeName = 'School Name is required';
+    if (!phoneNumber.trim() || phoneNumber.trim().length < 10) errors.phoneNumber = 'Enter a valid phone number (min 10 digits)';
     if (!isAllPhotosUploaded) errors.photo = `Please upload all ${step1Selection.characterCount} character photo(s)`;
 
     setSubmissionErrors(errors);
@@ -490,6 +498,36 @@ export default function Home() {
                         <p className="text-xs text-red-400 mt-1">{submissionErrors.collegeName}</p>
                       )}
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
+                        Phone Number <span className="text-pink-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="e.g. 9876543210"
+                        className={`w-full bg-white/5 border ${submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                      />
+                      {submissionErrors.phoneNumber && (
+                        <p className="text-xs text-red-400 mt-1">{submissionErrors.phoneNumber}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+                        College ID <span className="text-slate-500">(Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={studentId}
+                        onChange={(e) => setStudentId(e.target.value)}
+                        placeholder="e.g. CS2024001"
+                        className="w-full bg-white/5 border border-white/10 focus:border-purple-500 rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
+                      />
+                    </div>
                   </div>
 
                   {/* Step 2: Photo Upload UI (N slots based on character_count) */}
@@ -538,19 +576,38 @@ export default function Home() {
               {/* Right Column: Live Preview Card */}
               <div className="lg:col-span-5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 shadow-[0_8px_40px_rgba(124,58,237,0.15)] flex flex-col items-center">
                 <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 self-start">
-                  Live Form Status
+                  Live Preview
                 </h3>
                 <div className="relative w-full aspect-[3/4] max-w-sm rounded-md overflow-hidden border border-white/15 shadow-2xl bg-slate-900 flex items-center justify-center">
-                  <div className="relative z-10 flex flex-col items-center p-6 text-center space-y-2">
+                  {step1Selection.thumbnailUrl && (
+                    <img
+                      src={step1Selection.thumbnailUrl}
+                      alt="Theme Preview"
+                      className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-luminosity transition-all duration-500"
+                    />
+                  )}
+                  <div className="relative z-10 flex flex-col items-center p-6 text-center">
+                    {uploadedStoragePaths.filter(Boolean).length > 0 ? (
+                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-pink-500 mb-3 shadow-xl bg-slate-800 flex items-center justify-center">
+                        <ImageIcon className="w-8 h-8 text-slate-500" />
+                      </div>
+                    ) : (
+                      <div className="w-24 h-24 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-3 text-slate-500">
+                        <ImageIcon className="w-8 h-8" />
+                      </div>
+                    )}
                     <h4 className="font-heading font-bold text-lg text-white">
-                      {fullName || 'Student Name'}
+                      {fullName || 'Your Name Here'}
                     </h4>
-                    <p className="text-xs text-slate-300 font-medium">{collegeName || 'School Name'}</p>
-                    <div className="pt-4 border-t border-white/10 w-full text-left space-y-1">
-                      <p className="text-[11px] text-slate-400">Module: <span className="text-purple-300">{step1Selection.moduleId}</span></p>
-                      <p className="text-[11px] text-slate-400">Paper Size: <span className="text-amber-300">{step1Selection.paperSize}</span></p>
-                      <p className="text-[11px] text-slate-400">Photos Uploaded: <span className="text-emerald-400">{uploadedStoragePaths.filter(Boolean).length} / {step1Selection.characterCount}</span></p>
+                    {collegeName && <p className="text-xs text-slate-300 font-medium mt-0.5">{collegeName}</p>}
+                    {studentId && <p className="text-xs text-purple-300 font-mono mt-0.5">{studentId}</p>}
+                    {phoneNumber && <p className="text-xs text-slate-400 font-mono mt-0.5">{phoneNumber}</p>}
+                    <div className="mt-3 text-[10px] text-slate-400 space-y-0.5">
+                      <p>Photos: <span className="text-emerald-400">{uploadedStoragePaths.filter(Boolean).length} / {step1Selection.characterCount}</span></p>
                     </div>
+                    <span className="mt-4 text-[10px] text-slate-400 bg-black/60 px-3 py-1 rounded-full border border-white/10">
+                      {step1Selection.themeName || 'Template Preview'}
+                    </span>
                   </div>
                 </div>
               </div>

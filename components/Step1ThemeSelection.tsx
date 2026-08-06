@@ -12,6 +12,8 @@ export interface ThemeSelectionState {
   themeId: string;
   paperSize: PaperSize;
   characterCount: number;
+  thumbnailUrl: string;
+  themeName: string;
 }
 
 interface Step1ThemeSelectionProps {
@@ -152,15 +154,18 @@ export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSel
     prevSelectionRef.paperSize = paperSize;
     prevSelectionRef.characterCount = characterCount;
 
+    const selectedTheme = themes.find((t) => t.id === selectedThemeId);
     if (onSelectionChange) {
       onSelectionChange({
         moduleId: selectedModule,
         themeId: selectedThemeId,
         paperSize,
         characterCount,
+        thumbnailUrl: selectedTheme?.preview_thumbnail_url ?? '',
+        themeName: selectedTheme?.name ?? '',
       });
     }
-  }, [selectedModule, selectedThemeId, paperSize, characterCount, onSelectionChange]);
+  }, [selectedModule, selectedThemeId, paperSize, characterCount, themes, onSelectionChange]);
 
   return (
     <div className="space-y-6">
