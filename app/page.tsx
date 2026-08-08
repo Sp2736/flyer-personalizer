@@ -4,10 +4,11 @@ import { useState, useCallback } from 'react';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import Step1ThemeSelection from '@/components/Step1ThemeSelection';
 import PhotoUploadGrid from '@/components/PhotoUploadGrid';
+import Step6HistoryTable from '@/components/Step6HistoryTable';
 import { useCredits, CreditBadge } from '@/components/Credits';
 import { apiFetch, PreviewResponse, DownloadResponse } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle, LogOut } from 'lucide-react';
+import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle, LogOut, History, PlusCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface Template {
@@ -25,6 +26,7 @@ const TEMPLATES: Template[] = [
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<'login' | 'submission' | 'result'>('login');
+  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
 
   // Login Form State
   const [collegeId, setCollegeId] = useState('');
@@ -318,6 +320,34 @@ export default function Home() {
         </header>
       )}
 
+      {/* NEW: Tab Navigation (Only show if logged in and on the submission screen) */}
+      {currentScreen === 'submission' && (
+        <div className="w-full max-w-6xl mx-auto mb-6 flex items-center justify-between p-2 rounded-xl bg-slate-900/80 backdrop-blur-md border border-white/15 shadow-xl px-4 sm:px-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab('create')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'create'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30 border border-purple-400/40'
+                  : 'bg-white/10 text-slate-200 hover:bg-white/20 hover:text-white border border-white/10'
+              }`}
+            >
+              <PlusCircle className="w-4 h-4 text-purple-300" /> Create Poster
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'history'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30 border border-purple-400/40'
+                  : 'bg-white/10 text-slate-200 hover:bg-white/20 hover:text-white border border-white/10'
+              }`}
+            >
+              <History className="w-4 h-4 text-purple-300" /> Generation History
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="z-10 w-full max-w-6xl mx-auto">
         <AnimatePresence mode="wait">
           {/* SCREEN 1: LOGIN */}
@@ -342,12 +372,17 @@ export default function Home() {
                 <form onSubmit={handleLoginSubmit} className="space-y-5">
                   {/* College ID */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
+                    <label 
+                      htmlFor="login-college-id" 
+                      className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2"
+                    >
                       College ID
                     </label>
                     <div className="relative">
                       <IdCard className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
+                        id="login-college-id"
+                        name="loginCollegeId"
                         type="text"
                         value={collegeId}
                         onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
@@ -425,192 +460,216 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* SCREEN 2: SUBMISSION MODULE */}
+          {/* SCREEN 2: SUBMISSION MODULE OR HISTORY */}
           {currentScreen === 'submission' && (
             <motion.div
-              key="submission"
+              key={`submission-${activeTab}`}
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
             >
-              {/* Left Column: Form Card */}
-              <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 md:p-8 shadow-[0_8px_40px_rgba(124,58,237,0.15)]">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-xl font-bold font-heading text-white">Create Your Poster</h2>
-                    <p className="text-xs text-slate-400">Fill in your details and choose a studio template</p>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    Step 1 of 2
-                  </span>
-                </div>
-
-                <form onSubmit={handleGeneratePreview} className="space-y-6">
-                  {/* Step 1: Module, Theme, Paper Size & Character Count Selection */}
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4 mb-6">
-                    <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-purple-300">
-                        Step 1 Configuration
-                      </h3>
-                      <span className="text-[10px] bg-purple-500/20 text-purple-200 px-2 py-0.5 rounded border border-purple-500/30 font-mono">
-                        {step1Selection.paperSize} · {step1Selection.characterCount} {step1Selection.characterCount === 1 ? 'Slot' : 'Slots'}
-                      </span>
-                    </div>
-                    <Step1ThemeSelection
-                      onSelectionChange={handleStep1SelectionChange}
-                    />
-                  </div>
-
-                  {/* Inputs Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        Student Name <span className="text-pink-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="e.g. Alex Johnson"
-                        className={`w-full bg-white/5 border ${submissionErrors.fullName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
-                      />
-                      {submissionErrors.fullName && (
-                        <p className="text-xs text-red-400 mt-1">{submissionErrors.fullName}</p>
-                      )}
+              {activeTab === 'create' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  {/* Left Column: Form Card */}
+                  <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 md:p-8 shadow-[0_8px_40px_rgba(124,58,237,0.15)]">
+                    <div className="mb-6">
+                      <h2 className="text-xl font-bold font-heading text-white">Create Your Poster</h2>
+                      <p className="text-xs text-slate-400">Fill in your details and choose a studio template</p>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        School Name <span className="text-pink-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={collegeName}
-                        onChange={(e) => setCollegeName(e.target.value)}
-                        placeholder="e.g. St. Xavier High School"
-                        className={`w-full bg-white/5 border ${submissionErrors.collegeName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
-                      />
-                      {submissionErrors.collegeName && (
-                        <p className="text-xs text-red-400 mt-1">{submissionErrors.collegeName}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        Phone Number <span className="text-pink-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="e.g. 9876543210"
-                        className={`w-full bg-white/5 border ${submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
-                      />
-                      {submissionErrors.phoneNumber && (
-                        <p className="text-xs text-red-400 mt-1">{submissionErrors.phoneNumber}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
-                        College ID <span className="text-slate-500">(Optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        placeholder="e.g. CS2024001"
-                        className="w-full bg-white/5 border border-white/10 focus:border-purple-500 rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Step 2: Photo Upload UI (N slots based on character_count) */}
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4">
-                    <PhotoUploadGrid
-                      characterCount={step1Selection.characterCount}
-                      onSlotsChanged={handleSlotsChanged}
-                    />
-                    {submissionErrors.photo && (
-                      <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3.5 h-3.5" /> {submissionErrors.photo}
-                      </p>
-                    )}
-                  </div>
-
-                  {generationError && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      <span>{generationError}</span>
-                    </div>
-                  )}
-
-                  {/* Step 3 & 4: Generate Preview Button */}
-                  <button
-                    type="submit"
-                    disabled={isGenerating || !isFormValid}
-                    className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 mt-4 ${
-                      isFormValid && !isGenerating
-                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white cursor-pointer'
-                        : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin text-purple-400" /> Generating Preview...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-5 h-5" /> Generate Preview (Free)
-                      </>
-                    )}
-                  </button>
-                </form>
-              </div>
-
-              {/* Right Column: Live Preview Card */}
-              <div className="lg:col-span-5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 shadow-[0_8px_40px_rgba(124,58,237,0.15)] flex flex-col items-center">
-                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 self-start">
-                  Live Preview
-                </h3>
-                <div className="relative w-full aspect-[3/4] max-w-sm rounded-md overflow-hidden border border-white/15 shadow-2xl bg-slate-900 flex items-center justify-center">
-                  {step1Selection.thumbnailUrl && (
-                    <img
-                      src={step1Selection.thumbnailUrl}
-                      alt="Theme Preview"
-                      className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-luminosity transition-all duration-500"
-                    />
-                  )}
-                  <div className="relative z-10 flex flex-col items-center p-6 text-center">
-                    {uploadedStoragePaths.filter(Boolean).length > 0 ? (
-                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-pink-500 mb-3 shadow-xl bg-slate-800 flex items-center justify-center">
-                        <ImageIcon className="w-8 h-8 text-slate-500" />
+                    <form onSubmit={handleGeneratePreview} className="space-y-6">
+                      {/* Step 1: Module, Theme, Paper Size & Character Count Selection */}
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4 mb-6">
+                        <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-purple-300">
+                            Step 1 Configuration
+                          </h3>
+                          <span className="text-[10px] bg-purple-500/20 text-purple-200 px-2 py-0.5 rounded border border-purple-500/30 font-mono">
+                            {step1Selection.paperSize} · {step1Selection.characterCount} {step1Selection.characterCount === 1 ? 'Slot' : 'Slots'}
+                          </span>
+                        </div>
+                        <Step1ThemeSelection
+                          onSelectionChange={handleStep1SelectionChange}
+                        />
                       </div>
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-3 text-slate-500">
-                        <ImageIcon className="w-8 h-8" />
+
+                      {/* Inputs Grid */}
+                      {/* Inputs Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label 
+                            htmlFor="student-name" 
+                            className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2"
+                          >
+                            Student Name <span className="text-pink-500">*</span>
+                          </label>
+                          <input
+                            id="student-name"
+                            name="studentName"
+                            autoComplete="name"
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="e.g. Alex Johnson"
+                            className={`w-full bg-white/5 border ${submissionErrors.fullName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                              } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                          />
+                          {submissionErrors.fullName && (
+                            <p className="text-xs text-red-400 mt-1">{submissionErrors.fullName}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label 
+                            htmlFor="college-name" 
+                            className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2"
+                          >
+                            College Name <span className="text-pink-500">*</span>
+                          </label>
+                          <input
+                            id="college-name"
+                            name="collegeName"
+                            autoComplete="organization"
+                            type="text"
+                            value={collegeName}
+                            onChange={(e) => setCollegeName(e.target.value)}
+                            placeholder="e.g. St. Xavier College"
+                            className={`w-full bg-white/5 border ${submissionErrors.collegeName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                              } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                          />
+                          {submissionErrors.collegeName && (
+                            <p className="text-xs text-red-400 mt-1">{submissionErrors.collegeName}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label 
+                            htmlFor="phone-number" 
+                            className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2"
+                          >
+                            Phone Number <span className="text-pink-500">*</span>
+                          </label>
+                          <input
+                            id="phone-number"
+                            name="phoneNumber"
+                            autoComplete="tel"
+                            type="tel"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            placeholder="e.g. 9876543210"
+                            className={`w-full bg-white/5 border ${submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
+                              } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                          />
+                          {submissionErrors.phoneNumber && (
+                            <p className="text-xs text-red-400 mt-1">{submissionErrors.phoneNumber}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label 
+                            htmlFor="submission-college-id" 
+                            className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2"
+                          >
+                            College ID <span className="text-slate-500">(Optional)</span>
+                          </label>
+                          <input
+                            id="submission-college-id"
+                            name="submissionCollegeId"
+                            type="text"
+                            value={studentId}
+                            onChange={(e) => setStudentId(e.target.value)}
+                            placeholder="e.g. CS2024001"
+                            className="w-full bg-white/5 border border-white/10 focus:border-purple-500 rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
+                          />
+                        </div>
                       </div>
-                    )}
-                    <h4 className="font-heading font-bold text-lg text-white">
-                      {fullName || 'Your Name Here'}
-                    </h4>
-                    {collegeName && <p className="text-xs text-slate-300 font-medium mt-0.5">{collegeName}</p>}
-                    {studentId && <p className="text-xs text-purple-300 font-mono mt-0.5">{studentId}</p>}
-                    {phoneNumber && <p className="text-xs text-slate-400 font-mono mt-0.5">{phoneNumber}</p>}
-                    <div className="mt-3 text-[10px] text-slate-400 space-y-0.5">
-                      <p>Photos: <span className="text-emerald-400">{uploadedStoragePaths.filter(Boolean).length} / {step1Selection.characterCount}</span></p>
+
+                      {/* Step 2: Photo Upload UI (N slots based on character_count) */}
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4">
+                        <PhotoUploadGrid
+                          characterCount={step1Selection.characterCount}
+                          onSlotsChanged={handleSlotsChanged}
+                        />
+                        {submissionErrors.photo && (
+                          <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> {submissionErrors.photo}
+                          </p>
+                        )}
+                      </div>
+
+                      {generationError && (
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>{generationError}</span>
+                        </div>
+                      )}
+
+                      {/* Step 3 & 4: Generate Preview Button */}
+                      <button
+                        type="submit"
+                        disabled={isGenerating || !isFormValid}
+                        className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 mt-4 ${
+                          isFormValid && !isGenerating
+                            ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white cursor-pointer'
+                            : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
+                        }`}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <RefreshCw className="w-5 h-5 animate-spin text-purple-400" /> Generating Preview...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-5 h-5" /> Generate Preview (Free)
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Right Column: Live Preview Card */}
+                  <div className="lg:col-span-5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 shadow-[0_8px_40px_rgba(124,58,237,0.15)] flex flex-col items-center">
+                    <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 self-start">
+                      Live Preview
+                    </h3>
+                    <div className="relative w-full aspect-[3/4] max-w-sm rounded-md overflow-hidden border border-white/15 shadow-2xl bg-slate-900 flex items-center justify-center">
+                      {step1Selection.thumbnailUrl && (
+                        <img
+                          src={step1Selection.thumbnailUrl}
+                          alt="Theme Preview"
+                          className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-luminosity transition-all duration-500"
+                        />
+                      )}
+                      <div className="relative z-10 flex flex-col items-center p-6 text-center">
+                        {uploadedStoragePaths.filter(Boolean).length > 0 ? (
+                          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-pink-500 mb-3 shadow-xl bg-slate-800 flex items-center justify-center">
+                            <ImageIcon className="w-8 h-8 text-slate-500" />
+                          </div>
+                        ) : (
+                          <div className="w-24 h-24 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-3 text-slate-500">
+                            <ImageIcon className="w-8 h-8" />
+                          </div>
+                        )}
+                        <h4 className="font-heading font-bold text-lg text-white">
+                          {fullName || 'Your Name Here'}
+                        </h4>
+                        {collegeName && <p className="text-xs text-slate-300 font-medium mt-0.5">{collegeName}</p>}
+                        {studentId && <p className="text-xs text-purple-300 font-mono mt-0.5">{studentId}</p>}
+                        {phoneNumber && <p className="text-xs text-slate-400 font-mono mt-0.5">{phoneNumber}</p>}
+                        <div className="mt-3 text-[10px] text-slate-400 space-y-0.5">
+                          <p>Photos: <span className="text-emerald-400">{uploadedStoragePaths.filter(Boolean).length} / {step1Selection.characterCount}</span></p>
+                        </div>
+                        <span className="mt-4 text-[10px] text-slate-400 bg-black/60 px-3 py-1 rounded-full border border-white/10">
+                          {step1Selection.themeName || 'Template Preview'}
+                        </span>
+                      </div>
                     </div>
-                    <span className="mt-4 text-[10px] text-slate-400 bg-black/60 px-3 py-1 rounded-full border border-white/10">
-                      {step1Selection.themeName || 'Template Preview'}
-                    </span>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <Step6HistoryTable />
+              )}
             </motion.div>
           )}
 
@@ -665,11 +724,10 @@ export default function Home() {
                     type="button"
                     onClick={handleDownloadPdf}
                     disabled={isDownloading || credits < 1}
-                    className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 ${
-                      credits >= 1 && !isDownloading
+                    className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 ${credits >= 1 && !isDownloading
                         ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white cursor-pointer'
                         : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
-                    }`}
+                      }`}
                   >
                     {isDownloading ? (
                       <>
