@@ -17,6 +17,7 @@ export interface ThemeSelectionState {
 }
 
 interface Step1ThemeSelectionProps {
+  selectedModule: string;
   onSelectionChange?: (state: ThemeSelectionState) => void;
 }
 
@@ -32,65 +33,40 @@ const DEMO_THEMES: Record<string, ThemeItem[]> = {
   notebook_sticker: [
     {
       id: 'theme_cyberpunk',
-      name: 'Cyberpunk Neon',
+      name: 'Bright Day',
       module_id: 'notebook_sticker',
-      preview_thumbnail_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&auto=format&fit=crop&q=80',
+      preview_thumbnail_url: 'https://images.unsplash.com/photo-1513530534585-c7b1394c6d51?w=500&auto=format&fit=crop&q=80',
     },
     {
       id: 'theme_minimal',
-      name: 'Minimal Mono',
+      name: 'Minimal Light',
       module_id: 'notebook_sticker',
-      preview_thumbnail_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&auto=format&fit=crop&q=80',
+      preview_thumbnail_url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop&q=80',
     },
     {
       id: 'theme_retrowave',
-      name: 'Retro Wave',
+      name: 'Spring Vibes',
       module_id: 'notebook_sticker',
-      preview_thumbnail_url: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=80',
+      preview_thumbnail_url: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=500&auto=format&fit=crop&q=80',
     },
   ],
   event_flyer: [
     {
       id: 'theme_fest_glow',
-      name: 'Tech Fest Glow',
+      name: 'Morning Glow',
       module_id: 'event_flyer',
-      preview_thumbnail_url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80',
+      preview_thumbnail_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=500&auto=format&fit=crop&q=80',
     },
   ],
 };
 
-export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSelectionProps) {
-  const [modules, setModules] = useState<ModuleItem[]>(DEMO_MODULES);
-  const [selectedModule, setSelectedModule] = useState<string>('notebook_sticker');
+export default function Step1ThemeSelection({ selectedModule, onSelectionChange }: Step1ThemeSelectionProps) {
   const [themes, setThemes] = useState<ThemeItem[]>(DEMO_THEMES['notebook_sticker'] || []);
   const [selectedThemeId, setSelectedThemeId] = useState<string>('theme_cyberpunk');
   const [paperSize, setPaperSize] = useState<PaperSize>('A4');
   const [characterCount, setCharacterCount] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch modules on mount
-  useEffect(() => {
-    async function fetchModules() {
-      try {
-        setLoading(true);
-        const data = await apiFetch<ModuleItem[]>('/modules');
-        if (Array.isArray(data) && data.length > 0) {
-          const enabledOnly = data.filter((m) => m.enabled);
-          setModules(enabledOnly);
-          if (enabledOnly.length > 0 && !enabledOnly.some((m) => m.id === selectedModule)) {
-            setSelectedModule(enabledOnly[0].id);
-          }
-        }
-      } catch (err) {
-        // Fallback to local demo data if endpoint unavailable
-        console.warn('GET /modules failed, falling back to demo modules:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchModules();
-  }, []);
 
   // Fetch themes whenever selectedModule changes
   useEffect(() => {
@@ -169,43 +145,15 @@ export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSel
 
   return (
     <div className="space-y-6">
-      {/* 1. Module Selector */}
-      <div>
-        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-2">
-          <LayoutGrid className="w-4 h-4 text-purple-400" />
-          <span>Select Module</span>
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          {modules.map((mod) => (
-            <button
-              key={mod.id}
-              type="button"
-              disabled={!mod.enabled}
-              onClick={() => setSelectedModule(mod.id)}
-              className={`p-3 rounded-lg border text-left text-xs font-medium transition-all flex items-center justify-between ${
-                selectedModule === mod.id
-                  ? 'border-purple-500 bg-purple-500/15 text-white shadow-md shadow-purple-500/10'
-                  : mod.enabled
-                  ? 'border-white/10 bg-white/5 text-slate-300 hover:border-purple-500/50 hover:bg-white/10'
-                  : 'border-white/5 bg-white/2 text-slate-600 cursor-not-allowed opacity-50'
-              }`}
-            >
-              <span>{mod.name}</span>
-              {!mod.enabled && <span className="text-[10px] uppercase text-slate-500 font-bold">Disabled</span>}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* 2. Theme Gallery Grid */}
       <div>
-        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-2">
-          <Palette className="w-4 h-4 text-pink-400" />
+        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+          <Palette className="w-4 h-4 text-purple-500" />
           <span>Theme Gallery</span>
-          {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-400 ml-auto" />}
+          {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-500 ml-auto" />}
         </label>
         {themes.length === 0 ? (
-          <div className="p-4 border border-white/10 rounded-lg bg-white/5 text-slate-400 text-xs text-center">
+          <div className="p-4 border border-slate-200 rounded-lg bg-white text-slate-500 text-xs text-center">
             No themes available for this module.
           </div>
         ) : (
@@ -218,21 +166,21 @@ export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSel
                   onClick={() => setSelectedThemeId(theme.id)}
                   className={`group relative cursor-pointer rounded-lg overflow-hidden border transition-all ${
                     isSelected
-                      ? 'border-pink-500 ring-2 ring-pink-500/50 scale-[1.02]'
-                      : 'border-white/10 hover:border-pink-500/50'
+                      ? 'border-purple-500 shadow-md shadow-purple-500/20 ring-1 ring-purple-500'
+                      : 'border-slate-200 hover:border-purple-300'
                   }`}
                 >
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-slate-900">
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
                     <img
                       src={theme.preview_thumbnail_url}
                       alt={theme.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  <div className="p-2.5 bg-slate-950/80 backdrop-blur-md flex items-center justify-between">
-                    <span className="text-xs font-medium text-white truncate">{theme.name}</span>
+                  <div className="p-2.5 bg-white/90 backdrop-blur-md flex items-center justify-between border-t border-slate-100">
+                    <span className="text-xs font-medium text-slate-900 truncate">{theme.name}</span>
                     {isSelected && (
-                      <span className="w-2 h-2 rounded-full bg-pink-500 shadow-[0_0_8px_#ec4899]" />
+                      <span className="w-2 h-2 rounded-full bg-purple-600 shadow-[0_0_8px_#9333ea]" />
                     )}
                   </div>
                 </div>
@@ -246,8 +194,8 @@ export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSel
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Paper Size Selector */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-amber-400" />
+          <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-purple-500" />
             <span>Paper Size</span>
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -258,8 +206,8 @@ export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSel
                 onClick={() => setPaperSize(size)}
                 className={`py-2.5 px-3 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all ${
                   paperSize === size
-                    ? 'border-amber-500 bg-amber-500/15 text-amber-200 shadow-md shadow-amber-500/10'
-                    : 'border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-amber-500/40'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm shadow-purple-500/10'
+                    : 'border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-purple-300'
                 }`}
               >
                 {size === '12x18' ? '12 × 18 in' : 'A4'}
@@ -270,12 +218,12 @@ export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSel
 
         {/* Character Count Selector */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-400" />
+              <Users className="w-4 h-4 text-purple-500" />
               <span>Characters / Photos</span>
             </span>
-            <span className="text-[10px] text-slate-400 lowercase font-normal">(max {maxChars} for {paperSize})</span>
+            <span className="text-[10px] text-slate-500 lowercase font-normal">(max {maxChars} for {paperSize})</span>
           </label>
           <div className="grid grid-cols-4 gap-2">
             {characterCountOptions.map((num) => (
@@ -285,8 +233,8 @@ export default function Step1ThemeSelection({ onSelectionChange }: Step1ThemeSel
                 onClick={() => setCharacterCount(num)}
                 className={`py-2.5 rounded-lg border text-xs font-bold transition-all ${
                   characterCount === num
-                    ? 'border-blue-500 bg-blue-500/15 text-blue-300 shadow-md shadow-blue-500/10'
-                    : 'border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-blue-500/40'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm shadow-purple-500/10'
+                    : 'border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-purple-300'
                 }`}
               >
                 {num} {num === 1 ? 'Char' : 'Chars'}

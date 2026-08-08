@@ -1,14 +1,20 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import Step1ThemeSelection from '@/components/Step1ThemeSelection';
 import PhotoUploadGrid from '@/components/PhotoUploadGrid';
 import { useCredits, CreditBadge } from '@/components/Credits';
-import { apiFetch, PreviewResponse, DownloadResponse } from '@/lib/api';
+import { apiFetch, PreviewResponse, DownloadResponse, ModuleItem } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle, LogOut } from 'lucide-react';
+import { IdCard, Eye, EyeOff, Sparkles, ArrowRight, Upload, CheckCircle2, RefreshCw, Download, Image as ImageIcon, AlertCircle, LogOut, LayoutGrid } from 'lucide-react';
 import confetti from 'canvas-confetti';
+
+const DEMO_MODULES: ModuleItem[] = [
+  { id: 'notebook_sticker', name: 'Notebook Sticker', enabled: true },
+  { id: 'event_flyer', name: 'Event Flyer', enabled: true },
+  { id: 'id_card', name: 'ID Card / Badge', enabled: false },
+];
 
 interface Template {
   id: string;
@@ -25,6 +31,8 @@ const TEMPLATES: Template[] = [
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<'login' | 'submission' | 'result'>('login');
+  const [modules, setModules] = useState<ModuleItem[]>(DEMO_MODULES);
+  const [selectedModule, setSelectedModule] = useState<string>('notebook_sticker');
 
   // Login Form State
   const [collegeId, setCollegeId] = useState('');
@@ -41,9 +49,28 @@ export default function Home() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(TEMPLATES[0]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  // Fetch modules on mount
+  useEffect(() => {
+    async function fetchModules() {
+      try {
+        const data = await apiFetch<ModuleItem[]>('/modules');
+        if (Array.isArray(data) && data.length > 0) {
+          const enabledOnly = data.filter((m) => m.enabled);
+          setModules(enabledOnly);
+          if (enabledOnly.length > 0 && !enabledOnly.some((m) => m.id === selectedModule)) {
+            setSelectedModule(enabledOnly[0].id);
+          }
+        }
+      } catch (err) {
+        console.warn('GET /modules failed, falling back to demo modules:', err);
+      }
+    }
+    fetchModules();
+  }, []);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [submissionErrors, setSubmissionErrors] = useState<{ fullName?: string; collegeName?: string; phoneNumber?: string; photo?: string }>({});
+  const [formStep, setFormStep] = useState<1 | 2 | 3>(1);
 
   const [step1Selection, setStep1Selection] = useState<{
     moduleId: string;
@@ -91,6 +118,7 @@ export default function Home() {
     setPhotoError(null);
     setLoginErrors({});
     setSubmissionErrors({});
+    setFormStep(1);
     setCurrentScreen('login');
   };
 
@@ -114,6 +142,7 @@ export default function Home() {
   };
 
   const handleBypass = () => {
+    setFormStep(1);
     setCurrentScreen('submission');
   };
 
@@ -222,7 +251,7 @@ export default function Home() {
       } catch (err: any) {
         console.warn('POST /generate/preview failed, using local mock for testing:', err);
         genId = `gen_${Date.now()}`;
-        previewUrl = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80';
+        previewUrl = step1Selection.thumbnailUrl;
       }
 
       setGenerationId(genId);
@@ -295,10 +324,10 @@ export default function Home() {
 
       {/* Top Header Navigation for Authenticated/Active Session */}
       {currentScreen !== 'login' && (
-        <header className="sticky top-2 sm:top-4 z-50 w-full max-w-6xl mx-auto mb-6 px-4 sm:px-6 py-3 bg-slate-950/90 backdrop-blur-md border border-white/10 rounded-md sm:rounded-lg shadow-xl flex items-center justify-between transition-all">
+        <header className="sticky top-2 sm:top-4 z-50 w-full max-w-6xl mx-auto mb-6 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur-md border border-slate-200 rounded-md sm:rounded-lg shadow-sm flex items-center justify-between transition-all">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <img src="/logo.jpg" alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 rounded-md object-cover border border-white/20 shadow-md" />
-            <span className="font-heading font-bold text-base sm:text-lg text-white tracking-tight">
+            <img src="/logo.jpg" alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 rounded-md object-cover border border-slate-200 shadow-sm" />
+            <span className="font-heading font-bold text-base sm:text-lg text-slate-900 tracking-tight">
               Poster Generator
             </span>
           </div>
@@ -309,7 +338,7 @@ export default function Home() {
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 shadow-md"
+              className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold uppercase tracking-wider transition-all backdrop-blur-md active:scale-95 shadow-sm"
             >
               <LogOut className="w-4 h-4 text-pink-400" />
               <span>Sign Out</span>
@@ -330,19 +359,19 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
               className="max-w-md mx-auto w-full"
             >
-              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-8 shadow-[0_8px_40px_rgba(124,58,237,0.2)]">
+              <div className="backdrop-blur-xl bg-white/80 border border-slate-200 rounded-md p-8 shadow-[0_8px_40px_rgba(0,0,0,0.05)]">
                 <div className="text-center mb-8">
-                  <img src="/logo.jpg" alt="Logo" className="w-16 h-16 rounded-md object-cover border border-white/20 shadow-xl mx-auto mb-4" />
-                  <h1 className="text-2xl font-bold font-heading bg-gradient-to-r from-white via-slate-200 to-purple-200 bg-clip-text text-transparent">
+                  <img src="/logo.jpg" alt="Logo" className="w-16 h-16 rounded-md object-cover border border-slate-200 shadow-sm mx-auto mb-4" />
+                  <h1 className="text-2xl font-bold font-heading bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent">
                     Poster Generator
                   </h1>
-                  <p className="text-sm text-slate-400 mt-1">Sign in with your credentials to continue</p>
+                  <p className="text-sm text-slate-500 mt-1">Sign in with your credentials to continue</p>
                 </div>
 
                 <form onSubmit={handleLoginSubmit} className="space-y-5">
                   {/* College ID */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-medium text-slate-700 uppercase tracking-wider mb-2">
                       College ID
                     </label>
                     <div className="relative">
@@ -352,8 +381,8 @@ export default function Home() {
                         value={collegeId}
                         onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
                         suppressHydrationWarning
-                        className={`w-full bg-white/5 border ${loginErrors.collegeId ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        className={`w-full bg-white border ${loginErrors.collegeId ? 'border-red-500 animate-shake' : 'border-slate-200 focus:border-purple-500'
+                          } rounded-md pl-11 pr-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500/20 transition-all`}
                       />
                     </div>
                     {loginErrors.collegeId && (
@@ -365,7 +394,7 @@ export default function Home() {
 
                   {/* Password */}
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-medium text-slate-700 uppercase tracking-wider mb-2">
                       Password
                     </label>
                     <div className="relative">
@@ -374,14 +403,14 @@ export default function Home() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         suppressHydrationWarning
-                        className={`w-full bg-white/5 border ${loginErrors.password ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md pl-4 pr-11 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
+                        className={`w-full bg-white border ${loginErrors.password ? 'border-red-500 animate-shake' : 'border-slate-200 focus:border-purple-500'
+                          } rounded-md pl-4 pr-11 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500/20 transition-all`}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         suppressHydrationWarning
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -415,7 +444,7 @@ export default function Home() {
                       type="button"
                       onClick={handleBypass}
                       suppressHydrationWarning
-                      className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 border-dashed rounded-md text-slate-400 hover:text-white text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98]"
+                      className="px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 border-dashed rounded-md text-slate-500 hover:text-slate-800 text-xs font-semibold uppercase tracking-wider transition-all active:scale-[0.98]"
                     >
                       DEV BYPASS
                     </button>
@@ -436,176 +465,238 @@ export default function Home() {
               className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
             >
               {/* Left Column: Form Card */}
-              <div className="lg:col-span-7 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 md:p-8 shadow-[0_8px_40px_rgba(124,58,237,0.15)]">
-                <div className="flex items-center justify-between mb-6">
+              <div className="lg:col-span-7 backdrop-blur-xl bg-white/80 border border-slate-200 rounded-md p-6 md:p-8 shadow-[0_8px_40px_rgba(0,0,0,0.05)]">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                   <div>
-                    <h2 className="text-xl font-bold font-heading text-white">Create Your Poster</h2>
-                    <p className="text-xs text-slate-400">Fill in your details and choose a studio template</p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-xl font-bold font-heading text-slate-900">Create Your Poster</h2>
+                      <div className="flex items-center bg-purple-50 border border-purple-200 rounded-md overflow-hidden">
+                        <div className="px-2 py-1.5 bg-purple-100 border-r border-purple-200">
+                          <LayoutGrid className="w-3.5 h-3.5 text-purple-700" />
+                        </div>
+                        <select
+                          value={selectedModule}
+                          onChange={(e) => setSelectedModule(e.target.value)}
+                          className="bg-transparent text-purple-700 text-xs font-semibold px-2 py-1.5 outline-none cursor-pointer"
+                        >
+                          {modules.map(mod => (
+                            <option key={mod.id} value={mod.id} disabled={!mod.enabled}>
+                              {mod.name} {!mod.enabled ? '(Disabled)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1.5">Fill in your details and choose a studio template</p>
                   </div>
-                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    Step 1 of 2
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-md bg-purple-100 text-purple-800 border border-purple-200 shrink-0">
+                    Step {formStep} of 3
                   </span>
                 </div>
 
                 <form onSubmit={handleGeneratePreview} className="space-y-6">
-                  {/* Step 1: Module, Theme, Paper Size & Character Count Selection */}
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4 mb-6">
-                    <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-purple-300">
-                        Step 1 Configuration
-                      </h3>
-                      <span className="text-[10px] bg-purple-500/20 text-purple-200 px-2 py-0.5 rounded border border-purple-500/30 font-mono">
-                        {step1Selection.paperSize} · {step1Selection.characterCount} {step1Selection.characterCount === 1 ? 'Slot' : 'Slots'}
-                      </span>
-                    </div>
-                    <Step1ThemeSelection
-                      onSelectionChange={handleStep1SelectionChange}
-                    />
-                  </div>
-
-                  {/* Inputs Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        Student Name <span className="text-pink-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="e.g. Alex Johnson"
-                        className={`w-full bg-white/5 border ${submissionErrors.fullName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
-                      />
-                      {submissionErrors.fullName && (
-                        <p className="text-xs text-red-400 mt-1">{submissionErrors.fullName}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        School Name <span className="text-pink-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={collegeName}
-                        onChange={(e) => setCollegeName(e.target.value)}
-                        placeholder="e.g. St. Xavier High School"
-                        className={`w-full bg-white/5 border ${submissionErrors.collegeName ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
-                      />
-                      {submissionErrors.collegeName && (
-                        <p className="text-xs text-red-400 mt-1">{submissionErrors.collegeName}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider mb-2">
-                        Phone Number <span className="text-pink-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="e.g. 9876543210"
-                        className={`w-full bg-white/5 border ${submissionErrors.phoneNumber ? 'border-red-500' : 'border-white/10 focus:border-purple-500'
-                          } rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all`}
-                      />
-                      {submissionErrors.phoneNumber && (
-                        <p className="text-xs text-red-400 mt-1">{submissionErrors.phoneNumber}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
-                        College ID <span className="text-slate-500">(Optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        placeholder="e.g. CS2024001"
-                        className="w-full bg-white/5 border border-white/10 focus:border-purple-500 rounded-md px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Step 2: Photo Upload UI (N slots based on character_count) */}
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10 shadow-inner space-y-4">
-                    <PhotoUploadGrid
-                      characterCount={step1Selection.characterCount}
-                      onSlotsChanged={handleSlotsChanged}
-                    />
-                    {submissionErrors.photo && (
-                      <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3.5 h-3.5" /> {submissionErrors.photo}
-                      </p>
-                    )}
-                  </div>
-
-                  {generationError && (
-                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      <span>{generationError}</span>
-                    </div>
+                  {formStep === 1 && (
+                    <>
+                      {/* Step 1: Module, Theme, Paper Size & Character Count Selection */}
+                      <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4 mb-6">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                            Step 1 Configuration
+                          </h3>
+                          <span className="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-200 font-mono">
+                            {step1Selection.paperSize} · {step1Selection.characterCount} {step1Selection.characterCount === 1 ? 'Slot' : 'Slots'}
+                          </span>
+                        </div>
+                        <Step1ThemeSelection
+                          selectedModule={selectedModule}
+                          onSelectionChange={handleStep1SelectionChange}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormStep(2)}
+                        className="w-full font-medium py-3.5 rounded-md shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-2 mt-4 bg-purple-600 hover:bg-purple-700 text-white active:scale-[0.98]"
+                      >
+                        Next Step <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
 
-                  {/* Step 3 & 4: Generate Preview Button */}
-                  <button
-                    type="submit"
-                    disabled={isGenerating || !isFormValid}
-                    className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 mt-4 ${
-                      isFormValid && !isGenerating
-                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white cursor-pointer'
-                        : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin text-purple-400" /> Generating Preview...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-5 h-5" /> Generate Preview (Free)
-                      </>
-                    )}
-                  </button>
+                  {formStep === 2 && (
+                    <>
+                      {/* Inputs Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 uppercase tracking-wider mb-2">
+                            Student Name <span className="text-pink-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="e.g. Alex Johnson"
+                            className={`w-full bg-white border ${submissionErrors.fullName ? 'border-red-500' : 'border-slate-200 focus:border-purple-500'
+                              } rounded-md px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500/20 transition-all`}
+                          />
+                          {submissionErrors.fullName && (
+                            <p className="text-xs text-red-500 mt-1">{submissionErrors.fullName}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 uppercase tracking-wider mb-2">
+                            School Name <span className="text-pink-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={collegeName}
+                            onChange={(e) => setCollegeName(e.target.value)}
+                            placeholder="e.g. St. Xavier High School"
+                            className={`w-full bg-white border ${submissionErrors.collegeName ? 'border-red-500' : 'border-slate-200 focus:border-purple-500'
+                              } rounded-md px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500/20 transition-all`}
+                          />
+                          {submissionErrors.collegeName && (
+                            <p className="text-xs text-red-500 mt-1">{submissionErrors.collegeName}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 uppercase tracking-wider mb-2">
+                            Phone Number <span className="text-pink-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            placeholder="e.g. 9876543210"
+                            className={`w-full bg-white border ${submissionErrors.phoneNumber ? 'border-red-500' : 'border-slate-200 focus:border-purple-500'
+                              } rounded-md px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500/20 transition-all`}
+                          />
+                          {submissionErrors.phoneNumber && (
+                            <p className="text-xs text-red-500 mt-1">{submissionErrors.phoneNumber}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                            College ID <span className="text-slate-400">(Optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={studentId}
+                            onChange={(e) => setStudentId(e.target.value)}
+                            placeholder="e.g. CS2024001"
+                            className="w-full bg-white border border-slate-200 focus:border-purple-500 rounded-md px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 mt-4">
+                        <button
+                          type="button"
+                          onClick={() => setFormStep(1)}
+                          className="px-4 py-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-md text-slate-600 font-medium transition-all"
+                        >
+                          Prev
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormStep(3)}
+                          className="flex-1 font-medium py-3.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white active:scale-[0.98]"
+                        >
+                          Next Step <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {formStep === 3 && (
+                    <>
+                      {/* Step 3: Photo Upload UI (N slots based on character_count) */}
+                      <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+                        <PhotoUploadGrid
+                          characterCount={step1Selection.characterCount}
+                          onSlotsChanged={handleSlotsChanged}
+                        />
+                        {submissionErrors.photo && (
+                          <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> {submissionErrors.photo}
+                          </p>
+                        )}
+                      </div>
+
+                      {generationError && (
+                        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>{generationError}</span>
+                        </div>
+                      )}
+
+                      {/* Step 3 & 4: Generate Preview Button */}
+                      <div className="flex gap-3 mt-4">
+                        <button
+                          type="button"
+                          onClick={() => setFormStep(2)}
+                          className="px-4 py-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-md text-slate-600 font-medium transition-all"
+                        >
+                          Prev
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isGenerating || !isFormValid}
+                          className={`flex-1 font-medium py-3.5 rounded-md shadow-md transition-all flex items-center justify-center gap-2 ${
+                            isFormValid && !isGenerating
+                              ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/20 active:scale-[0.98] text-white cursor-pointer'
+                              : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                          }`}
+                        >
+                          {isGenerating ? (
+                            <>
+                              <RefreshCw className="w-5 h-5 animate-spin text-purple-200" /> Generating Preview...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-5 h-5" /> Generate Preview (Free)
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </form>
               </div>
 
               {/* Right Column: Live Preview Card */}
-              <div className="lg:col-span-5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-6 shadow-[0_8px_40px_rgba(124,58,237,0.15)] flex flex-col items-center">
-                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 self-start">
+              <div className="lg:col-span-5 backdrop-blur-xl bg-white/80 border border-slate-200 rounded-md p-6 shadow-[0_8px_40px_rgba(0,0,0,0.05)] flex flex-col items-center">
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 self-start">
                   Live Preview
                 </h3>
-                <div className="relative w-full aspect-[3/4] max-w-sm rounded-md overflow-hidden border border-white/15 shadow-2xl bg-slate-900 flex items-center justify-center">
+                <div className={`relative w-full ${step1Selection.paperSize === 'A4' ? 'aspect-[210/297]' : 'aspect-[2/3]'} max-w-sm rounded-md overflow-hidden border border-slate-200 shadow-xl bg-slate-50 flex items-center justify-center transition-all duration-500`}>
                   {step1Selection.thumbnailUrl && (
                     <img
                       src={step1Selection.thumbnailUrl}
                       alt="Theme Preview"
-                      className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-luminosity transition-all duration-500"
+                      className="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-multiply transition-all duration-500"
                     />
                   )}
                   <div className="relative z-10 flex flex-col items-center p-6 text-center">
-                    {uploadedStoragePaths.filter(Boolean).length > 0 ? (
-                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-pink-500 mb-3 shadow-xl bg-slate-800 flex items-center justify-center">
-                        <ImageIcon className="w-8 h-8 text-slate-500" />
-                      </div>
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-3 text-slate-500">
-                        <ImageIcon className="w-8 h-8" />
-                      </div>
-                    )}
-                    <h4 className="font-heading font-bold text-lg text-white">
+                    <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
+                      {Array.from({ length: step1Selection.characterCount }).map((_, idx) => (
+                        <div key={idx} className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 flex items-center justify-center ${uploadedStoragePaths[idx] ? 'border-pink-500 shadow-md bg-white' : 'border-slate-200 bg-slate-100 shadow-sm'}`}>
+                          <ImageIcon className="w-6 h-6 text-slate-400" />
+                        </div>
+                      ))}
+                    </div>
+                    <h4 className="font-heading font-bold text-lg text-slate-900 drop-shadow-sm">
                       {fullName || 'Your Name Here'}
                     </h4>
-                    {collegeName && <p className="text-xs text-slate-300 font-medium mt-0.5">{collegeName}</p>}
-                    {studentId && <p className="text-xs text-purple-300 font-mono mt-0.5">{studentId}</p>}
-                    {phoneNumber && <p className="text-xs text-slate-400 font-mono mt-0.5">{phoneNumber}</p>}
-                    <div className="mt-3 text-[10px] text-slate-400 space-y-0.5">
-                      <p>Photos: <span className="text-emerald-400">{uploadedStoragePaths.filter(Boolean).length} / {step1Selection.characterCount}</span></p>
+                    {collegeName && <p className="text-xs text-slate-700 font-medium mt-0.5 drop-shadow-sm">{collegeName}</p>}
+                    {studentId && <p className="text-xs text-purple-700 font-mono mt-0.5">{studentId}</p>}
+                    {phoneNumber && <p className="text-xs text-slate-600 font-mono mt-0.5">{phoneNumber}</p>}
+                    <div className="mt-3 text-[10px] text-slate-600 space-y-0.5">
+                      <p>Photos: <span className="text-emerald-600">{uploadedStoragePaths.filter(Boolean).length} / {step1Selection.characterCount}</span></p>
                     </div>
-                    <span className="mt-4 text-[10px] text-slate-400 bg-black/60 px-3 py-1 rounded-full border border-white/10">
+                    <span className="mt-4 text-[10px] text-slate-700 bg-white/80 px-3 py-1 rounded-full border border-slate-200 shadow-sm">
                       {step1Selection.themeName || 'Template Preview'}
                     </span>
                   </div>
@@ -624,15 +715,15 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
               className="max-w-md mx-auto text-center"
             >
-              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-md p-8 shadow-[0_8px_40px_rgba(124,58,237,0.3)]">
-                <div className="inline-flex items-center justify-center p-3 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 mb-4">
+              <div className="backdrop-blur-xl bg-white/80 border border-slate-200 rounded-md p-8 shadow-[0_8px_40px_rgba(0,0,0,0.05)]">
+                <div className="inline-flex items-center justify-center p-3 rounded-full bg-purple-100 text-purple-600 border border-purple-200 mb-4">
                   <Sparkles className="w-8 h-8" />
                 </div>
-                <h2 className="text-2xl font-bold font-heading text-white">Watermarked Preview 🎉</h2>
-                <p className="text-xs text-slate-400 mt-1 mb-6">Review your preview. High-resolution PDF costs 1 credit.</p>
+                <h2 className="text-2xl font-bold font-heading text-slate-900">Watermarked Preview 🎉</h2>
+                <p className="text-xs text-slate-500 mt-1 mb-6">Review your preview. High-resolution PDF costs 1 credit.</p>
 
                 {/* Watermarked Preview Container */}
-                <div className="relative aspect-[3/4] rounded-md overflow-hidden border-2 border-purple-500/50 shadow-2xl mb-6 bg-slate-900 flex items-center justify-center">
+                <div className="relative aspect-[3/4] rounded-md overflow-hidden border-2 border-slate-300 shadow-md mb-6 bg-slate-50 flex items-center justify-center">
                   {watermarkedPreviewUrl ? (
                     <div className="relative w-full h-full">
                       <img
@@ -665,10 +756,10 @@ export default function Home() {
                     type="button"
                     onClick={handleDownloadPdf}
                     disabled={isDownloading || credits < 1}
-                    className={`w-full font-medium py-3.5 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 ${
+                    className={`w-full font-medium py-3.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 ${
                       credits >= 1 && !isDownloading
                         ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:opacity-90 active:scale-[0.98] text-white cursor-pointer'
-                        : 'bg-white/5 border border-white/10 text-slate-500 cursor-not-allowed'
+                        : 'bg-white border border-slate-200 text-slate-400 cursor-not-allowed'
                     }`}
                   >
                     {isDownloading ? (
@@ -688,7 +779,7 @@ export default function Home() {
                       setCurrentScreen('submission');
                       setDownloadError(null);
                     }}
-                    className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-slate-300 text-sm font-medium transition-all"
+                    className="w-full py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md text-slate-600 text-sm font-medium transition-all"
                   >
                     Back to Form
                   </button>

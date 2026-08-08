@@ -31,14 +31,14 @@ export function useCredits() {
 
 export function CreditBadge({ credits, loading, onRefresh }: { credits: number; loading?: boolean; onRefresh?: () => void }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-      <Coins className="w-4 h-4 text-amber-400" />
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold shadow-sm">
+      <Coins className="w-4 h-4 text-amber-500" />
       <span>{credits} {credits === 1 ? 'Credit' : 'Credits'} Available</span>
       {onRefresh && (
         <button
           type="button"
           onClick={onRefresh}
-          className="hover:rotate-180 transition-transform p-0.5 text-amber-400"
+          className="hover:rotate-180 transition-transform p-0.5 text-amber-500"
           title="Refresh credits balance"
         >
           <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />

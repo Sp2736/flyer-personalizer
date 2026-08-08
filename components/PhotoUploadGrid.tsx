@@ -103,7 +103,7 @@ export function PhotoUploadSlot({ index, label, onUploaded, onCleared }: PhotoUp
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+      <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center justify-between">
         <span>{label || `Character ${index + 1} Photo`} <span className="text-pink-500">*</span></span>
         {status === 'uploaded' && (
           <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
@@ -127,12 +127,12 @@ export function PhotoUploadSlot({ index, label, onUploaded, onCleared }: PhotoUp
         }}
         className={`relative border-2 border-dashed rounded-xl p-4 transition-all flex flex-col items-center justify-center min-h-[140px] text-center ${
           isDragging
-            ? 'border-pink-500 bg-pink-500/10 scale-[1.01]'
+            ? 'border-pink-500 bg-pink-50 scale-[1.01]'
             : status === 'uploaded'
-            ? 'border-emerald-500/50 bg-emerald-500/5'
+            ? 'border-emerald-500/50 bg-emerald-50'
             : status === 'error'
-            ? 'border-red-500/50 bg-red-500/5'
-            : 'border-white/15 bg-white/5 hover:border-purple-500/50'
+            ? 'border-red-500/50 bg-red-50'
+            : 'border-slate-300 bg-white hover:border-purple-400'
         }`}
       >
         <input
@@ -150,12 +150,12 @@ export function PhotoUploadSlot({ index, label, onUploaded, onCleared }: PhotoUp
         {status === 'uploading' && (
           <div className="flex flex-col items-center gap-2 py-2">
             {previewUrl && (
-              <div className="w-14 h-14 rounded-full overflow-hidden border border-purple-400/50 shadow-inner opacity-60 relative">
+              <div className="w-14 h-14 rounded-full overflow-hidden border border-purple-300 shadow-inner opacity-60 relative">
                 <img src={previewUrl} alt="Uploading..." className="w-full h-full object-cover" />
               </div>
             )}
-            <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" />
-            <p className="text-xs text-purple-300 font-medium">Uploading to storage...</p>
+            <RefreshCw className="w-5 h-5 text-purple-500 animate-spin" />
+            <p className="text-xs text-purple-600 font-medium">Uploading to storage...</p>
           </div>
         )}
 
@@ -164,17 +164,17 @@ export function PhotoUploadSlot({ index, label, onUploaded, onCleared }: PhotoUp
             <button
               type="button"
               onClick={handleClear}
-              className="absolute -top-1 -right-1 p-1 rounded-full bg-slate-900/90 text-slate-400 hover:text-white border border-white/10 shadow-md"
+              className="absolute -top-1 -right-1 p-1 rounded-full bg-white/90 text-slate-500 hover:text-slate-800 border border-slate-200 shadow-md"
               title="Remove photo"
             >
               <X className="w-3.5 h-3.5" />
             </button>
-            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-500 shadow-md">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-purple-500 shadow-md">
               <img src={previewUrl} alt={`Slot ${index + 1}`} className="w-full h-full object-cover" />
             </div>
             <label
               htmlFor={`photo-slot-${index}`}
-              className="cursor-pointer text-[11px] text-purple-400 hover:text-purple-300 font-medium underline"
+              className="cursor-pointer text-[11px] text-purple-600 hover:text-purple-700 font-medium underline"
             >
               Replace Photo
             </label>
@@ -183,13 +183,13 @@ export function PhotoUploadSlot({ index, label, onUploaded, onCleared }: PhotoUp
 
         {(status === 'idle' || status === 'error') && (
           <label htmlFor={`photo-slot-${index}`} className="cursor-pointer flex flex-col items-center gap-1.5 w-full">
-            <div className="p-2.5 rounded-full bg-white/5 text-purple-400">
-              {status === 'error' ? <AlertCircle className="w-5 h-5 text-red-400" /> : <Upload className="w-5 h-5" />}
+            <div className="p-2.5 rounded-full bg-slate-50 text-purple-500">
+              {status === 'error' ? <AlertCircle className="w-5 h-5 text-red-500" /> : <Upload className="w-5 h-5" />}
             </div>
-            <p className="text-xs font-medium text-slate-200">
-              Drag & drop photo #{index + 1}, or <span className="text-purple-400 underline">browse</span>
+            <p className="text-xs font-medium text-slate-600">
+              Drag & drop photo #{index + 1}, or <span className="text-purple-600 underline">browse</span>
             </p>
-            <p className="text-[10px] text-slate-400">JPG, PNG, WebP · Max 10MB</p>
+            <p className="text-[10px] text-slate-500">JPG, PNG, WebP · Max 10MB</p>
           </label>
         )}
       </div>
@@ -231,8 +231,8 @@ export default function PhotoUploadGrid({ characterCount, onSlotsChanged }: Phot
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-          <User className="w-4 h-4 text-purple-400" />
+        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+          <User className="w-4 h-4 text-purple-500" />
           <span>Upload Character Photos ({characterCount} required)</span>
         </label>
       </div>
