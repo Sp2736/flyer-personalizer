@@ -1,0 +1,16 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pymupdf==1.24.10
+pillow==10.4.0
+opencv-python-headless==4.10.0.84
+rembg==2.0.59
+onnxruntime==1.19.2
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+supabase==2.7.4
+python-multipart==0.0.9
+slowapi==0.1.9
+python-dotenv==1.0.1
+pydantic==2.9.2
+pyjwt==2.9.0
+cryptography==43.0.1

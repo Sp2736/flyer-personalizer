@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: poster-generator-api
+    env: docker
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false        # paste your Supabase Postgres connection string
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"          # tighten to your Vercel/Netlify domain after first deploy
+    healthCheckPath: /health
+
+  - type: cron
+    name: poster-generator-cleanup
+    env: docker
+    plan: free
+    schedule: "0 * * * *"   # hourly retention sweep, FR-5.2 / NFR-10
+    dockerCommand: >
+      python -c "from app.core.cleanup import run_cleanup; print(run_cleanup())"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
