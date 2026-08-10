@@ -4,8 +4,8 @@ export default function AnimatedBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#F8FAFC]">
       {/* Dynamic Ambient Gradient Blobs - Light Mode */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-300/40 rounded-full blur-3xl animate-float-slow" />
-      <div className="absolute top-1/3 -right-32 w-[30rem] h-[30rem] bg-pink-300/30 rounded-full blur-3xl animate-float-reverse" />
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-300/40 rounded-full blur-3xl animate-float-slow" />
+      <div className="absolute top-1/3 -right-32 w-[30rem] h-[30rem] bg-blue-300/30 rounded-full blur-3xl animate-float-reverse" />
       <div className="absolute -bottom-40 left-1/4 w-[32rem] h-[32rem] bg-amber-200/40 rounded-full blur-3xl animate-float-slow" />
 
       {/* Subtle Grain Overlay */}

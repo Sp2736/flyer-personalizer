@@ -79,20 +79,26 @@ export class ApiError extends Error {
   }
 }
 
+import { supabase } from './supabaseClient';
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
-function authHeader(): Record<string, string> {
-  // If authentication headers/tokens are added in the future, include them here
+async function authHeader(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  if (data?.session?.access_token) {
+    return { Authorization: `Bearer ${data.session.access_token}` };
+  }
   return {};
 }
 
 export async function apiFetch<T>(path: string, opts: RequestInit = {}): Promise<T> {
+  const headers = await authHeader();
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
       ...opts.headers,
-      ...authHeader(),
+      ...headers,
     },
   });
 

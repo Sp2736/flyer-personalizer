@@ -3,5 +3,4 @@ tasks/
 # Next.js build output
 .next
 out
-# *.env*
-.env
+.env*

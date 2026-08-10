@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #F8FAFC;
-  --foreground: #0F172A;
+  --background: #F8FAFC; /* slate-50 */
+  --foreground: #0F172A; /* slate-900 */
 }
 
 body {
@@ -14,33 +14,19 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom Mesh Background & Glow Animations */
-@keyframes float {
+/* Custom Animations for Professional UI */
+@keyframes shake {
   0%, 100% {
-    transform: translate(0px, 0px) scale(1);
+    transform: translateX(0);
   }
-  50% {
-    transform: translate(30px, -40px) scale(1.1);
+  25% {
+    transform: translateX(-4px);
   }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.8;
+  75% {
+    transform: translateX(4px);
   }
 }
 
-.animate-float-slow {
-  animation: float 14s ease-in-out infinite;
-}
-
-.animate-float-reverse {
-  animation: float 18s ease-in-out infinite reverse;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
 }

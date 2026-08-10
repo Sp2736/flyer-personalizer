@@ -4,3 +4,4 @@ __pycache__/
 local_dev.db
 storage_local/
 .venv/
+execute*.py

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
+import ClientLayout from '@/components/ClientLayout';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -35,8 +36,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
-      <body className="bg-[#0B0B12] text-white min-h-screen antialiased selection:bg-pink-500 selection:text-white" suppressHydrationWarning>
-        {children}
+      <body className="bg-slate-50 text-slate-900 min-h-screen antialiased selection:bg-blue-500 selection:text-white" suppressHydrationWarning>
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );

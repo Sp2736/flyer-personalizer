@@ -5,25 +5,41 @@ import { apiFetch, CreditsResponse } from '@/lib/api';
 import { Coins, RefreshCw } from 'lucide-react';
 
 export function useCredits() {
-  const [credits, setCredits] = useState<number>(5); // default fallback initial balance
+  const [credits, setCreditsState] = useState<number>(5);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const refreshCredits = async () => {
-    try {
-      setLoading(true);
-      const res = await apiFetch<CreditsResponse>('/credits');
-      if (typeof res?.remaining === 'number') {
-        setCredits(res.remaining);
-      }
-    } catch (err) {
-      console.warn('GET /credits endpoint offline, using local credit state:', err);
-    } finally {
-      setLoading(false);
+  // Load initial from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('flyer_credits');
+    if (saved !== null) {
+      setCreditsState(parseInt(saved, 10));
     }
+  }, []);
+
+  const setCredits = (value: number | ((prev: number) => number)) => {
+    setCreditsState((prev) => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+      localStorage.setItem('flyer_credits', newValue.toString());
+      return newValue;
+    });
+  };
+
+  const refreshCredits = async () => {
+    setLoading(true);
+    // For this dummy frontend demo, we rely entirely on localStorage
+    // instead of querying the backend which might reset the balance to 10.
+    setTimeout(() => {
+      const saved = localStorage.getItem('flyer_credits');
+      if (saved !== null) {
+        setCreditsState(parseInt(saved, 10));
+      }
+      setLoading(false);
+    }, 400);
   };
 
   useEffect(() => {
     refreshCredits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { credits, setCredits, refreshCredits, loading };
