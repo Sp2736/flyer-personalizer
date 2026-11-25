@@ -23,3 +23,12 @@ downloadable event poster. No design software or manual editing needed.
 
 ## License
 MIT
+
+
+---
+
+## 📦 Project Snapshot
+
+<!--ARCHIVE_STATS_START-->
+<!-- auto-generated — do not edit manually -->
+<!--ARCHIVE_STATS_END-->
