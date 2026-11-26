@@ -42,6 +42,6 @@ MIT
 
 **Languages:** `TypeScript` 71.7%  `Python` 26.4%  `PLpgSQL` 1.0%  `JavaScript` 0.3%  `CSS` 0.3%  `Dockerfile` 0.2%
 
-**Top Contributors:** [@Sp2736](https://github.com/Sp2736) `8` · [@jalisa2106](https://github.com/jalisa2106) `6` · [@AduriteGem](https://github.com/AduriteGem) `4`
+**Top Contributors:** [@Sp2736](https://github.com/Sp2736) `14` · [@jalisa2106](https://github.com/jalisa2106) `6`
 
 <!--ARCHIVE_STATS_END-->
